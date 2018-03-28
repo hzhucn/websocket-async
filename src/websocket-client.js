@@ -18,16 +18,8 @@
  * // Close the connection.
  * await webSocketClient.disconnect();
  */
-export default class WebSocketClient {
+class WebSocketClient {
 
-    _socket: WebSocket;
-
-    _closeEvent: ?CloseEvent;
-
-    _receiveCallbacksQueue: Array<{ resolve: (data: any) => void, reject: (reason: any) => void }>;
-
-    _receiveDataQueue: Array<any>;
-    
     constructor() {
         this._reset();
     }
@@ -36,7 +28,7 @@ export default class WebSocketClient {
      * Whether a connection is currently open.
      * @returns true if the connection is open.
      */
-    get connected(): boolean {
+    get connected() {
         // Checking != null also checks against undefined.
         return this._socket != null && this._socket.readyState === WebSocket.OPEN;
     }
@@ -45,7 +37,7 @@ export default class WebSocketClient {
      * The number of messages available to receive.
      * @returns The number of queued messages that can be retrieved with {@link #receive}
      */
-    get dataAvailable(): number {
+    get dataAvailable() {
         return this._receiveDataQueue.length;
     }
 
@@ -53,7 +45,7 @@ export default class WebSocketClient {
      * Sets up a WebSocket connection to specified url. Resolves when the 
      * connection is established. Can be called again to reconnect to any url.
      */
-    connect(url: string, protocols?: string): Promise<void> {
+    connect(url, protocols) {
         return this.disconnect().then(() => {
             this._reset();
 
@@ -67,7 +59,7 @@ export default class WebSocketClient {
      * Send data through the websocket.
      * Must be connected. See {@link #connected}.
      */
-    send(data: any) {
+    send(data) {
         if (!this.connected) {
             throw this._closeEvent || new Error('Not connected.');
         }
@@ -82,7 +74,7 @@ export default class WebSocketClient {
      * or rejects if disconnected.
      * @returns A promise that resolves with the data received.
      */
-    receive(): Promise<any> {
+    receive() {
         if (this._receiveDataQueue.length !== 0) {
             return Promise.resolve(this._receiveDataQueue.shift());
         }
@@ -91,7 +83,7 @@ export default class WebSocketClient {
             return Promise.reject(this._closeEvent || new Error('Not connected.'));
         }
 
-        const receivePromise: Promise<any> = new Promise((resolve, reject) => {
+        const receivePromise = new Promise((resolve, reject) => {
             this._receiveCallbacksQueue.push({ resolve, reject });
         });
 
@@ -103,7 +95,7 @@ export default class WebSocketClient {
      * Returns a promise that will never reject.
      * The promise resolves once the WebSocket connection is closed.
      */
-    disconnect(code?: number, reason?: string): Promise<?CloseEvent> {
+    disconnect(code, reason) {
         if(!this.connected) {
             return Promise.resolve(this._closeEvent);
         }
@@ -131,13 +123,13 @@ export default class WebSocketClient {
      * Sets up the event listeners, which do the bulk of the work.
      * @private
      */
-    _setupListenersOnConnect(): Promise<void> {
+    _setupListenersOnConnect() {
         const socket = this._socket;
 
         return new Promise((resolve, reject) => {
 
-            const handleMessage: EventListener = event => {
-                const messageEvent: MessageEvent = ((event: any): MessageEvent);
+            const handleMessage = event => {
+                const messageEvent = event;
                 // The cast was necessary because Flow's libdef's don't contain
                 // a MessageEventListener definition.
 
@@ -149,10 +141,10 @@ export default class WebSocketClient {
                 this._receiveDataQueue.push(messageEvent.data);
             };
 
-            const handleOpen: EventListener = event => {
+            const handleOpen = event => {
                 socket.addEventListener('message', handleMessage);
                 socket.addEventListener('close', event => {
-                    this._closeEvent = ((event: any): CloseEvent);
+                    this._closeEvent = event;
 
                     // Whenever a close event fires, the socket is effectively dead.
                     // It's impossible for more messages to arrive.
